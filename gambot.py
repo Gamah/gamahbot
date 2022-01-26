@@ -2,6 +2,7 @@ import sys
 import datetime
 import asyncio
 from click import command
+from paramiko import Channel
 import pytmi
 import configparser
 import psycopg2
@@ -40,17 +41,17 @@ async def main() -> None:
                 cmd = privmsg.split(" ")[0]
                 if cmd == "!ping":
                     await client.send_privmsg("@"+name+": PONG!")
-                elif cmd == "!start":
+                elif cmd == "!start" and name == config['IRC']['channel']:
                     cur.execute("CALL sessions_start();")
                     sessionid = cur.fetchone()[0]
                     conn.commit()
                     await client.send_privmsg("SessionID: {:d} started!".format(sessionid))
-                elif cmd == "!stop":
+                elif cmd == "!stop" and name == config['IRC']['channel']:
                     cur.execute("CALL sessions_stop({:d});".format(sessionid))
                     conn.commit()
                     await client.send_privmsg("Session #{:d} stopped!".format(sessionid))
                     sessionid = None
-                elif cmd == "!kill":
+                elif cmd == "!kill" and name == config['IRC']['channel']:
                     await client.send_privmsg("Seeya!")
                     exit()
             print(name,"(",id,"): ",privmsg)
