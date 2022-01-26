@@ -5,31 +5,7 @@
 -- Dumped from database version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 -- Dumped by pg_dump version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 
--- Started on 2022-01-25 20:29:51 CST
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
-DROP DATABASE gamahbot;
---
--- TOC entry 2982 (class 1262 OID 16386)
--- Name: gamahbot; Type: DATABASE; Schema: -; Owner: gamahbot
---
-
-CREATE DATABASE gamahbot WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
-
-
-ALTER DATABASE gamahbot OWNER TO gamahbot;
-
-\connect gamahbot
+-- Started on 2022-01-25 20:52:53 CST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -43,7 +19,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 207 (class 1255 OID 16485)
+-- TOC entry 207 (class 1255 OID 16503)
 -- Name: log_message(bigint, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -58,8 +34,8 @@ ON CONFLICT (id)
 DO 
 UPDATE SET display_name = name;
 
-insert into messages(chatter_id,message,timestamp)
-values(chatter_id,log_message,current_timestamp);
+insert into messages(chatter_id,message,timestamp,session_id)
+values(chatter_id,log_message,current_timestamp,(select id from sessions where endtime is null limit 1));
 
 
 RETURN chatter_id;
@@ -124,7 +100,8 @@ CREATE TABLE public.messages (
     id bigint NOT NULL,
     chatter_id bigint NOT NULL,
     message character varying(255) NOT NULL,
-    "timestamp" timestamp with time zone NOT NULL
+    "timestamp" timestamp with time zone NOT NULL,
+    session_id bigint DEFAULT '-1'::integer NOT NULL
 );
 
 
@@ -175,7 +152,7 @@ ALTER TABLE public.sessions ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
--- TOC entry 2846 (class 2606 OID 16465)
+-- TOC entry 2847 (class 2606 OID 16465)
 -- Name: chatters chatters_id; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -184,7 +161,7 @@ ALTER TABLE ONLY public.chatters
 
 
 --
--- TOC entry 2848 (class 2606 OID 16444)
+-- TOC entry 2849 (class 2606 OID 16444)
 -- Name: chatters chatters_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -193,7 +170,7 @@ ALTER TABLE ONLY public.chatters
 
 
 --
--- TOC entry 2850 (class 2606 OID 16483)
+-- TOC entry 2851 (class 2606 OID 16483)
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -202,7 +179,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 2844 (class 2606 OID 16405)
+-- TOC entry 2845 (class 2606 OID 16405)
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -210,7 +187,7 @@ ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
 
 
--- Completed on 2022-01-25 20:29:51 CST
+-- Completed on 2022-01-25 20:52:53 CST
 
 --
 -- PostgreSQL database dump complete
