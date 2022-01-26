@@ -5,7 +5,7 @@
 -- Dumped from database version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 -- Dumped by pg_dump version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 
--- Started on 2022-01-25 19:41:37 CST
+-- Started on 2022-01-25 20:29:51 CST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +20,7 @@ SET row_security = off;
 
 DROP DATABASE gamahbot;
 --
--- TOC entry 2972 (class 1262 OID 16386)
+-- TOC entry 2982 (class 1262 OID 16386)
 -- Name: gamahbot; Type: DATABASE; Schema: -; Owner: gamahbot
 --
 
@@ -43,30 +43,33 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 205 (class 1255 OID 16453)
+-- TOC entry 207 (class 1255 OID 16485)
 -- Name: log_message(bigint, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.log_message(chatter_id bigint, display_name character varying, log_message character varying) RETURNS integer
+CREATE FUNCTION public.log_message(chatter_id bigint, name character varying, log_message character varying) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 BEGIN
 
 INSERT INTO chatters (id,display_name)
-VALUES(chatter_id,display_name)
-ON CONFLICT (chatter_id) 
+VALUES(chatter_id,name)
+ON CONFLICT (id) 
 DO 
-UPDATE SET chatters.display_name = display_name;
+UPDATE SET display_name = name;
+
+insert into messages(chatter_id,message,timestamp)
+values(chatter_id,log_message,current_timestamp);
 
 
 RETURN chatter_id;
 END; $$;
 
 
-ALTER FUNCTION public.log_message(chatter_id bigint, display_name character varying, log_message character varying) OWNER TO postgres;
+ALTER FUNCTION public.log_message(chatter_id bigint, name character varying, log_message character varying) OWNER TO postgres;
 
 --
--- TOC entry 206 (class 1255 OID 16412)
+-- TOC entry 208 (class 1255 OID 16412)
 -- Name: sessions_start(bigint); Type: PROCEDURE; Schema: public; Owner: gamahbot
 --
 
@@ -84,7 +87,7 @@ $$;
 ALTER PROCEDURE public.sessions_start(INOUT id bigint) OWNER TO gamahbot;
 
 --
--- TOC entry 207 (class 1255 OID 16437)
+-- TOC entry 209 (class 1255 OID 16437)
 -- Name: sessions_stop(bigint); Type: PROCEDURE; Schema: public; Owner: gamahbot
 --
 
@@ -111,6 +114,36 @@ CREATE TABLE public.chatters (
 
 
 ALTER TABLE public.chatters OWNER TO gamahbot;
+
+--
+-- TOC entry 206 (class 1259 OID 16479)
+-- Name: messages; Type: TABLE; Schema: public; Owner: gamahbot
+--
+
+CREATE TABLE public.messages (
+    id bigint NOT NULL,
+    chatter_id bigint NOT NULL,
+    message character varying(255) NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.messages OWNER TO gamahbot;
+
+--
+-- TOC entry 205 (class 1259 OID 16477)
+-- Name: messages_id_seq; Type: SEQUENCE; Schema: public; Owner: gamahbot
+--
+
+ALTER TABLE public.messages ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.messages_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 
 --
 -- TOC entry 202 (class 1259 OID 16401)
@@ -142,7 +175,16 @@ ALTER TABLE public.sessions ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
--- TOC entry 2840 (class 2606 OID 16444)
+-- TOC entry 2846 (class 2606 OID 16465)
+-- Name: chatters chatters_id; Type: CONSTRAINT; Schema: public; Owner: gamahbot
+--
+
+ALTER TABLE ONLY public.chatters
+    ADD CONSTRAINT chatters_id UNIQUE (id);
+
+
+--
+-- TOC entry 2848 (class 2606 OID 16444)
 -- Name: chatters chatters_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -151,7 +193,16 @@ ALTER TABLE ONLY public.chatters
 
 
 --
--- TOC entry 2838 (class 2606 OID 16405)
+-- TOC entry 2850 (class 2606 OID 16483)
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2844 (class 2606 OID 16405)
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: gamahbot
 --
 
@@ -159,7 +210,7 @@ ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
 
 
--- Completed on 2022-01-25 19:41:37 CST
+-- Completed on 2022-01-25 20:29:51 CST
 
 --
 -- PostgreSQL database dump complete

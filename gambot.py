@@ -16,6 +16,7 @@ conn = psycopg2.connect(
     user=config['DB']['user'],
     password=config['DB']['pass'])
 
+conn.autocommit = True
 cur = conn.cursor()
 sessionid = None
 
@@ -54,8 +55,12 @@ async def main() -> None:
                 elif cmd == "!kill" and name == config['IRC']['channel']:
                     await client.send_privmsg("Seeya!")
                     exit()
-            print(name,"(",id,"): ",privmsg)
-            
+            print(name,'(',id,'): ',privmsg)
+            if sessionid != None:
+                cur.callproc('log_message',(id,name,privmsg))
+                res = cur.fetchone()[0]
+                conn.commit()
+                print(res)
             del raw
             del msg
 
