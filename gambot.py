@@ -37,30 +37,30 @@ async def main() -> None:
             privmsg = msg.command.split(" :", 1)[1]
             name = msg.tags.get("display-name")
             id = msg.tags.get("user-id")
-
-            if(privmsg[0] == "!"):
-                cmd = privmsg.split(" ")[0]
-                if cmd == "!ping":
-                    await client.send_privmsg("@"+name+": PONG!")
-                elif cmd == "!start" and name == config['IRC']['channel']:
-                    cur.execute("CALL sessions_start();")
-                    sessionid = cur.fetchone()[0]
+            if msg.command.split(" :", 1)[0][:7] == 'PRIVMSG':
+                if(privmsg[0] == "!"):
+                    cmd = privmsg.split(" ")[0]
+                    if cmd == "!ping":
+                        await client.send_privmsg("@"+name+": PONG!")
+                    elif cmd == "!start" and name == config['IRC']['channel']:
+                        cur.execute("CALL sessions_start();")
+                        sessionid = cur.fetchone()[0]
+                        conn.commit()
+                        await client.send_privmsg("SessionID: {:d} started!".format(sessionid))
+                    elif cmd == "!stop" and name == config['IRC']['channel']:
+                        cur.execute("CALL sessions_stop({:d});".format(sessionid))
+                        conn.commit()
+                        await client.send_privmsg("Session #{:d} stopped!".format(sessionid))
+                        sessionid = None
+                    elif cmd == "!kill" and name == config['IRC']['channel']:
+                        await client.send_privmsg("Seeya!")
+                        exit()
+                print(name,'(',id,'): ',privmsg)
+                if sessionid != None:
+                    cur.callproc('log_message',(id,name,privmsg))
+                    res = cur.fetchone()[0]
                     conn.commit()
-                    await client.send_privmsg("SessionID: {:d} started!".format(sessionid))
-                elif cmd == "!stop" and name == config['IRC']['channel']:
-                    cur.execute("CALL sessions_stop({:d});".format(sessionid))
-                    conn.commit()
-                    await client.send_privmsg("Session #{:d} stopped!".format(sessionid))
-                    sessionid = None
-                elif cmd == "!kill" and name == config['IRC']['channel']:
-                    await client.send_privmsg("Seeya!")
-                    exit()
-            print(name,'(',id,'): ',privmsg)
-            if sessionid != None:
-                cur.callproc('log_message',(id,name,privmsg))
-                res = cur.fetchone()[0]
-                conn.commit()
-                print(res)
+                    print(res)
             del raw
             del msg
 
