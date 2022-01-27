@@ -5,7 +5,31 @@
 -- Dumped from database version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 -- Dumped by pg_dump version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 
--- Started on 2022-01-25 20:52:53 CST
+-- Started on 2022-01-26 22:51:48 CST
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+DROP DATABASE gamahbot;
+--
+-- TOC entry 2983 (class 1262 OID 16386)
+-- Name: gamahbot; Type: DATABASE; Schema: -; Owner: gamahbot
+--
+
+CREATE DATABASE gamahbot WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
+
+
+ALTER DATABASE gamahbot OWNER TO gamahbot;
+
+\connect gamahbot
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +44,7 @@ SET row_security = off;
 
 --
 -- TOC entry 207 (class 1255 OID 16503)
--- Name: log_message(bigint, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: log_message(bigint, character varying, character varying); Type: FUNCTION; Schema: public; Owner: gamahbot
 --
 
 CREATE FUNCTION public.log_message(chatter_id bigint, name character varying, log_message character varying) RETURNS integer
@@ -42,37 +66,46 @@ RETURN chatter_id;
 END; $$;
 
 
-ALTER FUNCTION public.log_message(chatter_id bigint, name character varying, log_message character varying) OWNER TO postgres;
+ALTER FUNCTION public.log_message(chatter_id bigint, name character varying, log_message character varying) OWNER TO gamahbot;
 
 --
--- TOC entry 208 (class 1255 OID 16412)
--- Name: sessions_start(bigint); Type: PROCEDURE; Schema: public; Owner: gamahbot
+-- TOC entry 220 (class 1255 OID 16507)
+-- Name: sessions_start(); Type: FUNCTION; Schema: public; Owner: gamahbot
 --
 
-CREATE PROCEDURE public.sessions_start(INOUT id bigint DEFAULT NULL::bigint)
+CREATE FUNCTION public.sessions_start() RETURNS integer
     LANGUAGE plpgsql
     AS $$
 BEGIN
-	UPDATE sessions SET endtime = TO_TIMESTAMP('1900-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') WHERE endtime IS NULL;
-    INSERT INTO sessions(starttime) values(current_timestamp);
-   	SELECT sessions.id FROM sessions where endtime is null order by id desc limit 1 INTO id;
-END
+
+UPDATE sessions SET endtime = TO_TIMESTAMP('1900-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') WHERE endtime IS NULL;
+INSERT INTO sessions(starttime) values(current_timestamp);
+
+RETURN (SELECT sessions.id FROM sessions where endtime is null order by id desc limit 1);
+
+END; 
 $$;
 
 
-ALTER PROCEDURE public.sessions_start(INOUT id bigint) OWNER TO gamahbot;
+ALTER FUNCTION public.sessions_start() OWNER TO gamahbot;
 
 --
--- TOC entry 209 (class 1255 OID 16437)
--- Name: sessions_stop(bigint); Type: PROCEDURE; Schema: public; Owner: gamahbot
+-- TOC entry 221 (class 1255 OID 16509)
+-- Name: sessions_stop(bigint); Type: FUNCTION; Schema: public; Owner: gamahbot
 --
 
-CREATE PROCEDURE public.sessions_stop(session_id bigint)
-    LANGUAGE sql
-    AS $$UPDATE sessions SET endtime = current_timestamp WHERE sessions.id = session_id;$$;
+CREATE FUNCTION public.sessions_stop(session_id bigint) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	UPDATE sessions SET endtime = current_timestamp WHERE sessions.id = session_id;
+RETURN session_id;
+
+END; 
+$$;
 
 
-ALTER PROCEDURE public.sessions_stop(session_id bigint) OWNER TO gamahbot;
+ALTER FUNCTION public.sessions_stop(session_id bigint) OWNER TO gamahbot;
 
 SET default_tablespace = '';
 
@@ -187,7 +220,7 @@ ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
 
 
--- Completed on 2022-01-25 20:52:53 CST
+-- Completed on 2022-01-26 22:51:48 CST
 
 --
 -- PostgreSQL database dump complete

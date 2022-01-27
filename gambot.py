@@ -43,15 +43,17 @@ async def main() -> None:
                     if cmd == "!ping":
                         await client.send_privmsg("@"+name+": PONG!")
                     elif cmd == "!start" and name == config['IRC']['channel']:
-                        cur.execute("CALL sessions_start();")
+                        cur.callproc('sessions_start')
                         sessionid = cur.fetchone()[0]
-                        conn.commit()
                         await client.send_privmsg("SessionID: {:d} started!".format(sessionid))
                     elif cmd == "!stop" and name == config['IRC']['channel']:
-                        cur.execute("CALL sessions_stop({:d});".format(sessionid))
-                        conn.commit()
-                        await client.send_privmsg("Session #{:d} stopped!".format(sessionid))
-                        sessionid = None
+                        cur.callproc('sessions_stop',(sessionid,))
+                        stoppedsession = cur.fetchone()[0]
+                        if sessionid == stoppedsession:
+                            await client.send_privmsg("Session #{:d} stopped!".format(stoppedsession))
+                            sessionid = None
+                        else:
+                            await client.send_privmsg("Unable to stop session #{:d}!".format(sessionid))
                     elif cmd == "!kill" and name == config['IRC']['channel']:
                         await client.send_privmsg("Seeya!")
                         exit()
