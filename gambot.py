@@ -56,11 +56,11 @@ async def main() -> None:
                         await client.send_privmsg("VibeCheck: {:d} started! Check in by sending !vibin in chat in the next 5 minutes. If you send it after that you will lose vibe points!".format(vibecheck_id))
                     elif cmd == "!vibin":
                         cur.callproc('vibeins_submit',(message_id,))
-                        vibein_vibecheck_id = cur.fetchone()[0]
-                        if vibein_vibecheck_id == None:
-                            await client.send_privmsg("@{:s} Ya done goofed! No vibe check is active!!".format(name))
+                        vibein_score = cur.fetchone()[0]
+                        if vibein_score <= 0:
+                            await client.send_privmsg("@{:s} Ya done goofed and lost {:d} points!".format(name,vibein_score))
                         else:
-                            await client.send_privmsg("@{:s} You got a vibe point for vibecheck: {:d}!".format(name,vibein_vibecheck_id))
+                            await client.send_privmsg("@{:s} Nice! You got {:d} points for vibing in!".format(name,vibein_score))
                     elif cmd == "!stop" and name == config['IRC']['channel']:
                         cur.callproc('sessions_stop',(sessionid,))
                         stoppedsession = cur.fetchone()[0]

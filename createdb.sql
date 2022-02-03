@@ -5,7 +5,7 @@
 -- Dumped from database version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 -- Dumped by pg_dump version 12.9 (Ubuntu 12.9-0ubuntu0.20.04.1)
 
--- Started on 2022-01-27 00:09:04 CST
+-- Started on 2022-02-02 18:47:04 CST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +20,7 @@ SET row_security = off;
 
 DROP DATABASE gamahbot;
 --
--- TOC entry 3002 (class 1262 OID 16386)
+-- TOC entry 3011 (class 1262 OID 16386)
 -- Name: gamahbot; Type: DATABASE; Schema: -; Owner: gamahbot
 --
 
@@ -134,12 +134,59 @@ ALTER FUNCTION public.vibechecks_start(message_id bigint) OWNER TO gamahbot;
 CREATE FUNCTION public.vibeins_submit(message_id bigint) RETURNS integer
     LANGUAGE plpgsql
     AS $$
+
+
+DECLARE 
+	current_vibecheck bigint;
+	score bigint;
+	new_score bigint;
+	already_vibed_message_id bigint;
+
 BEGIN
 
-INSERT INTO vibeins(message_id, vibecheck_id) values(message_id,(SELECT v.id from vibechecks v join messages m on m.id = v.message_id where m.timestamp + (5 * interval '1 minute') > current_timestamp));
+SELECT v.id 
+INTO current_vibecheck
+from vibechecks v 
+join messages m on m.id = v.message_id 
+where m.timestamp + (5 * interval '1 minute') > current_timestamp;
 
-RETURN (SELECT vibecheck_id FROM vibeins WHERE id = LASTVAL());
-END; 
+
+
+IF current_vibecheck IS NULL
+THEN
+	INSERT INTO vibeins(message_id,score) VALUES(vibeins_submit.message_id,-100);
+	RETURN -100;
+ELSE
+	SELECT vi.message_id
+	INTO already_vibed_message_id
+	FROM vibeins vi
+	JOIN messages m on m.id = vi.message_id
+	JOIN chatters c on c.id = m.chatter_id
+	WHERE vi.vibecheck_id = current_vibecheck
+	AND m.chatter_id = (select chatter_id from messages where id = vibeins_submit.message_id);
+	
+	IF already_vibed_message_id IS NULL
+	THEN
+		INSERT INTO vibeins(message_id, vibecheck_id,score) values(message_id,current_vibecheck,(SELECT 300 - EXTRACT(EPOCH FROM(current_timestamp - m.timestamp)) FROM vibechecks vc JOIN messages m on vc.message_id = m.id WHERE vc.id = current_vibecheck));
+		RETURN(SELECT vibeins.score FROM vibeins WHERE id = lastval());																   
+	ELSE
+		score = (select vibeins.score from vibeins where vibeins.message_id = already_vibed_message_id);
+		new_score = (SELECT 300 - EXTRACT(EPOCH FROM(current_timestamp - m.timestamp)) FROM vibechecks vc JOIN messages m on vc.message_id = m.id WHERE vc.id = current_vibecheck);
+		UPDATE vibeins
+		SET
+			score = new_score,
+			message_id = vibeins_submit.message_id
+		WHERE vibeins.message_id = already_vibed_message_id;
+		return new_score - score;
+	END IF;
+END IF;
+
+/*
+
+*/
+
+return score;
+END;
 $$;
 
 
@@ -258,7 +305,8 @@ ALTER TABLE public.vibechecks ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 CREATE TABLE public.vibeins (
     id bigint NOT NULL,
     message_id bigint NOT NULL,
-    vibecheck_id bigint
+    vibecheck_id bigint,
+    score bigint NOT NULL
 );
 
 
@@ -277,6 +325,102 @@ ALTER TABLE public.vibeins ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- TOC entry 2999 (class 0 OID 16440)
+-- Dependencies: 204
+-- Data for Name: chatters; Type: TABLE DATA; Schema: public; Owner: gamahbot
+--
+
+COPY public.chatters (id, display_name) FROM stdin;
+766108710	gamahcodes
+\.
+
+
+--
+-- TOC entry 3001 (class 0 OID 16479)
+-- Dependencies: 206
+-- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: gamahbot
+--
+
+COPY public.messages (id, chatter_id, message, "timestamp", session_id) FROM stdin;
+90	766108710	!start	2022-02-02 18:44:39.353771-06	\N
+91	766108710	!vibin	2022-02-02 18:44:44.02544-06	111
+92	766108710	!vibecheck	2022-02-02 18:44:48.970412-06	111
+93	766108710	!vibin	2022-02-02 18:44:56.561771-06	111
+94	766108710	!vibin	2022-02-02 18:45:00.062767-06	111
+\.
+
+
+--
+-- TOC entry 2997 (class 0 OID 16401)
+-- Dependencies: 202
+-- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: gamahbot
+--
+
+COPY public.sessions (id, starttime, endtime) FROM stdin;
+111	2022-02-02 18:44:39.359953-06	\N
+\.
+
+
+--
+-- TOC entry 3003 (class 0 OID 16515)
+-- Dependencies: 208
+-- Data for Name: vibechecks; Type: TABLE DATA; Schema: public; Owner: gamahbot
+--
+
+COPY public.vibechecks (id, message_id) FROM stdin;
+10	92
+\.
+
+
+--
+-- TOC entry 3005 (class 0 OID 16526)
+-- Dependencies: 210
+-- Data for Name: vibeins; Type: TABLE DATA; Schema: public; Owner: gamahbot
+--
+
+COPY public.vibeins (id, message_id, vibecheck_id, score) FROM stdin;
+29	91	\N	-100
+30	94	10	289
+\.
+
+
+--
+-- TOC entry 3012 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gamahbot
+--
+
+SELECT pg_catalog.setval('public.messages_id_seq', 94, true);
+
+
+--
+-- TOC entry 3013 (class 0 OID 0)
+-- Dependencies: 203
+-- Name: sessions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gamahbot
+--
+
+SELECT pg_catalog.setval('public.sessions_id_seq', 111, true);
+
+
+--
+-- TOC entry 3014 (class 0 OID 0)
+-- Dependencies: 207
+-- Name: vibecheck_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gamahbot
+--
+
+SELECT pg_catalog.setval('public.vibecheck_id_seq', 10, true);
+
+
+--
+-- TOC entry 3015 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: vibeins_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gamahbot
+--
+
+SELECT pg_catalog.setval('public.vibeins_id_seq', 30, true);
 
 
 --
@@ -333,7 +477,7 @@ ALTER TABLE ONLY public.vibeins
     ADD CONSTRAINT vibeins_pkey PRIMARY KEY (id);
 
 
--- Completed on 2022-01-27 00:09:04 CST
+-- Completed on 2022-02-02 18:47:04 CST
 
 --
 -- PostgreSQL database dump complete
