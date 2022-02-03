@@ -61,6 +61,17 @@ async def main() -> None:
                             await client.send_privmsg("@{:s} Ya done goofed and lost {:d} points!".format(name,vibein_score))
                         else:
                             await client.send_privmsg("@{:s} Nice! You got {:d} points for vibing in!".format(name,vibein_score))
+                    elif cmd == "!score":
+                        cur.callproc('vibeins_checkscore',(id,))
+                        score = cur.fetchone()[0]
+                        await client.send_privmsg("@{:s} Your current score is {:d}!".format(name,score))
+                    elif cmd == "!leaders":
+                        cur.callproc('vibeins_leaders')
+                        leaders = cur.fetchall()
+                        outstr = 'The leaders are... '
+                        for row in leaders:
+                            outstr = outstr + row[0] + ": " + str(row[1]) + "    "
+                        await client.send_privmsg(outstr)
                     elif cmd == "!stop" and name == config['IRC']['channel']:
                         cur.callproc('sessions_stop',(sessionid,))
                         stoppedsession = cur.fetchone()[0]
